@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2.1.5 簡単なSpriteアプリ</title>
+    <style type="text/css">
+      #draw-target {
+        width: 480px;
+        height: 320px;
+        background-color: #ccf;
+        position: relative;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="draw-target"></div>
+
+    <script>
+      const DHTMLSprite = (params) => {
+        const { width, height, images, imagesWidth, drawTargetElement } =
+          params;
+        if (!width || !height || !imagesWidth || !drawTargetElement) {
+          throw new Error("parameter invalid");
+        }
+
+        const div = document.createElement("div");
+        drawTargetElement.append(div);
+        const element = drawTargetElement.lastChild;
+        console.log(element);
+
+        const elementStyle = element.style;
+
+        // 高速化のためMath.floorのローカル参照をもつ
+        const mathFloor = Math.floor;
+
+        // style
+        element.style.position = "absolute";
+        element.style.width = `${width}px`;
+        element.style.height = `${height}px`;
+        element.style.backgroundImage = `url(${images})`;
+
+        const that = {
+          draw: (x, y) => {
+            elementStyle.left = `${x}px`;
+            elementStyle.top = `${y}px`;
+          },
+          changeImage: (index) => {
+            index *= width;
+            const vOffset = -mathFloor(index / imagesWidth) * height;
+            const hOffset = -index % imagesWidth;
+            elementStyle.backgroundPosition = `${hOffset}px ${vOffset}px`;
+          },
+          show: () => {
+            elementStyle.display = "block";
+          },
+          hide: () => {
+            elementStyle.display = "none";
+          },
+          destroy: () => {
+            element.remove();
+          },
+        };
+        return that;
+      };
+
+      window.addEventListener("DOMContentLoaded", () => {
+        const params = {
+          images: "cogs.png",
+          imagesWidth: 256,
+          width: 64,
+          height: 64,
+          drawTargetElement: document.getElementById("draw-target"),
+        };
+
+        const sprite1 = DHTMLSprite(params);
+        const sprite2 = DHTMLSprite(params);
+        sprite2.changeImage(5);
+        sprite1.draw(64, 64);
+        sprite2.draw(352, 192);
+      });
+    </script>
+  </body>
+</html>
