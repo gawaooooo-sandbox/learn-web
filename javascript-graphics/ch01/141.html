@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>1.4.1 高速Sin関数デモ</title>
+    <style type="text/css">
+      #draw-target {
+        width: 480px;
+        height: 320px;
+        background-color: #000;
+        position: relative;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="draw-target"></div>
+
+    <script>
+      const fastSin = (steps) => {
+        const table = [];
+        let ang = 0;
+        let angStep = (Math.PI * 2) / steps;
+
+        do {
+          table.push(Math.sin(ang));
+          ang += angStep;
+        } while (ang < Math.PI * 2);
+        return table;
+      };
+
+      const sinTable = fastSin(4096);
+
+      const drawGraph = (ang, freq, height, barsElement) => {
+        if (!barsElement || !barsElement.length) {
+          throw new Error("barsElement empty!");
+        }
+        const tmpHeight = height * 2;
+        for (let i = 0; i < 480; i++) {
+          barsElement[i].style.top =
+            160 - height + sinTable[(ang + i * freq) & 4095] * height + "px";
+          barsElement[i].style.height = tmpHeight + "px";
+        }
+      };
+
+      const createDiv = () => {
+        let div = "";
+        for (let i = 0; i < 480; i++) {
+          div += `<div style="position:absolute; width: 1px; height: 40px; background-color: #0d0; top: 0px; left: ${i}px;"></div>`;
+        }
+        return div;
+      };
+
+      window.addEventListener("DOMContentLoaded", () => {
+        const drawTarget = document.getElementById("draw-target");
+        if (drawTarget) {
+          drawTarget.innerHTML = createDiv();
+
+          let x = 0;
+          setInterval(() => {
+            drawGraph(
+              x * 50,
+              32 - sinTable[(x * 20) & 4095] * 16,
+              50 - sinTable[(x * 10) & 4095] * 20,
+              drawTarget.children
+            );
+            x++;
+          }, 20);
+        }
+      });
+    </script>
+  </body>
+</html>
