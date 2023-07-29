@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2.3.3 一定スピードの実現</title>
+    <style type="text/css">
+      #draw-target {
+        width: 480px;
+        height: 320px;
+        background-color: #ccf;
+        position: relative;
+      }
+      #time-info {
+        width: 480px;
+        height: 100px;
+        background-color: #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="draw-target"></div>
+    <div id="time-info"></div>
+    <script>
+      const DHTMLSprite = (params) => {
+        const { width, height, images, imagesWidth, drawTargetElement } =
+          params;
+        if (!width || !height || !imagesWidth || !drawTargetElement) {
+          throw new Error("parameter invalid");
+        }
+
+        const div = document.createElement("div");
+        drawTargetElement.append(div);
+        const element = drawTargetElement.lastChild;
+
+        const elementStyle = element.style;
+
+        // 高速化のためMath.floorのローカル参照をもつ
+        const mathFloor = Math.floor;
+
+        // style
+        element.style.position = "absolute";
+        element.style.width = `${width}px`;
+        element.style.height = `${height}px`;
+        element.style.backgroundImage = `url(${images})`;
+
+        const that = {
+          draw: (x, y) => {
+            elementStyle.left = `${x}px`;
+            elementStyle.top = `${y}px`;
+          },
+          changeImage: (index) => {
+            index *= width;
+            const vOffset = -mathFloor(index / imagesWidth) * height;
+            const hOffset = -index % imagesWidth;
+            elementStyle.backgroundPosition = `${hOffset}px ${vOffset}px`;
+          },
+          show: () => {
+            elementStyle.display = "block";
+          },
+          hide: () => {
+            elementStyle.display = "none";
+          },
+          destroy: () => {
+            element.remove();
+          },
+        };
+        return that;
+      };
+
+      const timeInfo = (goalFPS) => {
+        let oldTime;
+        let paused = true;
+        let interCount = 0;
+        let totalFPS = 0;
+        let totalCoeff = 0;
+
+        return {
+          getInfo: () => {
+            if (paused) {
+              paused = false;
+              oldTime = new Date().getTime();
+              return {
+                elapsed: 0,
+                coeff: 0,
+                FPS: 0,
+                averageFPS: 0,
+                averageCoeff: 0,
+              };
+            }
+
+            const newTime = new Date().getTime();
+            const elapsed = newTime - oldTime;
+            oldTime = newTime;
+            const FPS = 1000 / elapsed;
+            interCount++;
+            totalFPS += FPS;
+
+            const coeff = goalFPS / FPS;
+            totalCoeff += coeff;
+
+            return {
+              elapsed,
+              coeff: goalFPS / FPS,
+              FPS,
+              averageFPS: totalFPS / interCount,
+              averageCoeff: totalCoeff / interCount,
+            };
+          },
+          pause: () => {
+            paused = true;
+          },
+        };
+      };
+
+      const bouncySprite = (params) => {
+        let { x, y, xDir, yDir } = params;
+        const { maxX, maxY } = params;
+        const that = DHTMLSprite(params);
+        let animIndex = 0;
+
+        that.moveAndDraw = (tCoeff) => {
+          x += xDir * tCoeff;
+          y += yDir * tCoeff;
+          animIndex += xDir > 0 ? 1 * tCoeff : -1 * tCoeff;
+          let animIndex2 = animIndex % 5 >> 0;
+          animIndex2 += animIndex2 < 0 ? 5 : 0
+
+          if ((xDir < 0 && x < 0) || (xDir > 0 && x >= maxX)) {
+            xDir = -xDir;
+          }
+          if ((yDir < 0 && y < 0) || (yDir > 0 && y >= maxY)) {
+            yDir = -yDir;
+          }
+          that.changeImage(animIndex2);
+          that.draw(x, y);
+        };
+        return that;
+      };
+
+      const bouncyBoss = (numBouncy, drawTargetElement) => {
+        const bounces = [];
+        const timer = timeInfo(40); // 40FPSを目標値とする
+        const drawTargetElementWidth = parseInt(
+          window.getComputedStyle(drawTargetElement).width
+        );
+        const drawTargetElementHeight = parseInt(
+          window.getComputedStyle(drawTargetElement).height
+        );
+
+        for (let i = 0; i < numBouncy; i++) {
+          bounces.push(
+            bouncySprite({
+              images: "cogs.png",
+              imagesWidth: 256,
+              width: 64,
+              height: 64,
+              drawTargetElement: drawTargetElement,
+              x: Math.random() * (drawTargetElementWidth - 64),
+              y: Math.random() * (drawTargetElementHeight - 64),
+              xDir: Math.random() * 4 - 2,
+              yDir: Math.random() * 4 - 2,
+              maxX: drawTargetElementWidth - 64,
+              maxY: drawTargetElementHeight - 64,
+            })
+          );
+        }
+
+        const timeInfoElement = document.getElementById("time-info");
+        const moveAll = () => {
+          const { FPS, averageFPS, coeff, averageCoeff } = timer.getInfo();
+          timeInfoElement.innerText = `FPS: ${FPS}\nAverage FPS: ${averageFPS}\ncoeff: ${coeff}\nAverage Coeff: ${averageCoeff}`;
+          for (let i = 0; i < bounces.length; i++) {
+            bounces[i].moveAndDraw(coeff);
+          }
+          setTimeout(moveAll, 10);
+        };
+
+        // moveAllを呼びだす
+        moveAll();
+      };
+
+      window.addEventListener("DOMContentLoaded", () => {
+        bouncyBoss(50, document.getElementById("draw-target"));
+      });
+    </script>
+  </body>
+</html>
